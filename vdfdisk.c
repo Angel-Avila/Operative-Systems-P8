@@ -17,11 +17,46 @@ struct MBR {
 	unsigned short signature;		// 16 bits = 2 bytes
 };
 
+// Debe medir 512 bytes
+struct SECBOOTPART {
+	char jump[4];
+	char nombre_particion[8];
+	// Tabla de parámetros del bios
+	// Están los datos sobre el formato de la partición
+	unsigned short sec_inicpart;		// 1 sector
+	unsigned char sec_res;		// 1 sector reservado para el sector de boot de la partición
+	unsigned char sec_mapa_bits_area_nodos_i;// 1 sector
+	unsigned char sec_mapa_bits_bloques;	// 6 sectores
+	unsigned short sec_tabla_nodos_i;	// 3 sectores
+	unsigned int sec_log_particion;		// 43199 sectores
+	unsigned char sec_x_bloque;			// 2 sectores por bloque
+	unsigned char heads;				// 8 superficies
+	unsigned char cyls;				// 200 cilindros
+	unsigned char secfis;				// 27 sectores por track
+	char restante[484];	// Código de arranque
+};
+// printf("%d\n",sizeof(struct SECBOOT));
+
+// Debe medir 64 bytes, importante es que el tamaño sea potencia de 2
+struct INODE {
+	char name[18];
+	unsigned int datetimecreat;	// 32 bits
+	unsigned int datetimemodif;	// 32 bits
+	unsigned int datetimelaacc; // 32 bits
+	unsigned short uid;		// 16 bits
+	unsigned short gid;		// 16 bits
+	unsigned short perms;	// 16 bits
+	unsigned int size;			// 32 bits
+	unsigned short direct_blocks[10];	// 10 x 16 bits = 20 bytes
+	unsigned short indirect;	// 16 bits
+	unsigned short indirect2;	// 16 bits
+};
+
 int main()
 {
 	struct MBR mbr;
 	printf("%ld\n",sizeof(struct MBR));
-	
+
 	// Crear la primera partición que será desde
 	// 	Cilindro= 0, Superficie = 0, Sector Físico = 2
 	mbr.partition[0].chs_begin[0]=0; // Superficie
@@ -30,11 +65,11 @@ int main()
 
 	mbr.partition[0].chs_end[0]=5; // Superficie
 	mbr.partition[0].chs_end[1]=17 & 0x1F;	// Los 5 bits menos significativos son el sector
-	mbr.partition[0].chs_end[2]=299 & 0xFF;	// Cilindro 
+	mbr.partition[0].chs_end[2]=299 & 0xFF;	// Cilindro
 	mbr.partition[0].chs_end[1]=mbr.partition[0].chs_end[1] |
 								(299 & 0x300) >> 2;
-	
+
 	printf("chs_end de la primera partición %X %X %X\n",mbr.partition[0].chs_end[0],mbr.partition[0].chs_end[1],mbr.partition[0].chs_end[2]);
 
-	
+
 }

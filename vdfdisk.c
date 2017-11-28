@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "vdisk.h"
 
 #pragma pack(1)
 
@@ -55,23 +56,48 @@ struct INODE {
 int main()
 {
 	struct MBR mbr;
-	printf("%ld\n",sizeof(struct MBR));
 
+	for(int i = 0; i < 446; i++)
+		mbr.bootstrap_code[i] = 10 & 0xA;													// Llenar de As el bootstrap_code para ver su tamano en oktate
+
+  mbr.partition[0].drive_status = 128 & 0xFF; 								// Status; bit 7 is set for active or bootable
 	// Crear la primera partición que será desde
 	// 	Cilindro= 0, Superficie = 0, Sector Físico = 2
-	mbr.partition[0].chs_begin[0]=0; // Superficie
-	mbr.partition[0].chs_begin[1]=2 & 0x1F;	// Los 5 bits menos significativos son el sector
-	mbr.partition[0].chs_begin[2]=0;
+	mbr.partition[0].chs_begin[0]=0; 														// Superficie
+	mbr.partition[0].chs_begin[1]=2 & 0x1F;										  // Los 5 bits menos significativos son el sector
+	mbr.partition[0].chs_begin[2]=0;														// Cilindro
 
-	mbr.partition[0].chs_end[0]=5; // Superficie
-	mbr.partition[0].chs_end[1]=17 & 0x1F;	// Los 5 bits menos significativos son el sector
-	mbr.partition[0].chs_end[2]=299 & 0xFF;	// Cilindro
+  mbr.partition[0].partition_type = 0x08;											// Logical sectored FAT12 or FAT16
+	mbr.partition[0].chs_end[0]=5; 															// Superficie
+	mbr.partition[0].chs_end[1]=17 & 0x1F;											// Los 5 bits menos significativos son el sector
+	mbr.partition[0].chs_end[2]=299 & 0xFF;											// Cilindro
 	mbr.partition[0].chs_end[1]=mbr.partition[0].chs_end[1] |
 								(299 & 0x300) >> 2;
 
-	printf("chs_end de la primera partición %X %X %X\n",mbr.partition[0].chs_end[0],mbr.partition[0].chs_end[1],mbr.partition[0].chs_end[2]);
+  mbr.partition[0].lba = 2 & 0xFFFFFFFF;											// Logical base addressing of first absolute sector in partition
+  mbr.partition[0].secs_partition = 43199 & 0xFFFFFFFF;			  // Number of sections in partition (bloques)
 
-	vdwritesec(0, 0, 0, 0, 1, (char *) &mbr);
+	mbr.signature = 0xAA55;
+
+	printf("end de la primera particion %X %X %X\n", mbr.partition[0].chs_end[0], mbr.partition[0].chs_end[1], mbr.partition[0].chs_end[2]);
+
+	for(int i = 1; i < 4; i++) {
+		mbr.partition[i].drive_status = 0; 					  // Status; bit 7 is set for active or bootable
+
+		mbr.partition[i].chs_begin[0]=0; 							// Superficie
+		mbr.partition[i].chs_begin[1]=0;							// Los 5 bits menos significativos son el sector
+		mbr.partition[i].chs_begin[2]=0;						  // Cilindro
+
+		mbr.partition[i].partition_type = 0;					// Logical sectored FAT12 or FAT16
+		mbr.partition[i].chs_end[0]=0; 	 							// Superficie
+		mbr.partition[i].chs_end[1]=0;								// Los 5 bits menos significativos son el sector
+		mbr.partition[i].chs_end[2]=0;								// Cilindro
+
+		mbr.partition[i].lba = 0;										 // Logical base addressing of first absolute sector in partition
+		mbr.partition[i].secs_partition = 0;			   // Number of sections in partition (bloques)
+	}
+
+	vdwritesector(0, 0, 0, 1, 1, (char *) &mbr);
 
 	int part_formatear=0;
 	struct SECBOOTPART sbp;
@@ -87,7 +113,7 @@ int main()
 	sbp.sec_res=1;
 	sbp.sec_mapa_bits_area_nodos_i=1;
 	sbp.sec_mapa_bits_bloques=6;
-	sbp.sec_tabla_nodos_i=3
+	sbp.sec_tabla_nodos_i=3;
 	sbp.sec_log_particion=43100;
 	sbp.sec_x_bloque=2;
 	sbp.heads=8;
@@ -96,6 +122,6 @@ int main()
 
 	// Escribir el contenido de la estructura sbp en el sector físico inicial de la
 	// partición
-	vdwritesec(unidad,cip,sip,sfip,1,(char *) &sbp);
+	//vdwritesector(unidad,cip,sip,sfip,1,(char *) &sbp);
 
 }

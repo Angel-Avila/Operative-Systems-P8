@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "vdisk.h"
+#include "phys2log.h"
 
 #pragma pack(1)
 
@@ -58,7 +59,7 @@ int main()
 	struct MBR mbr;
 
 	for(int i = 0; i < 446; i++)
-		mbr.bootstrap_code[i] = 10 & 0xA;													// Llenar de As el bootstrap_code para ver su tamano en oktate
+		mbr.bootstrap_code[i] = 170 & 0xAA;													// Llenar de As el bootstrap_code para ver su tamano en oktate
 
   mbr.partition[0].drive_status = 128 & 0xFF; 								// Status; bit 7 is set for active or bootable
 	// Crear la primera partición que será desde
@@ -99,10 +100,8 @@ int main()
 
 	vdwritesector(0, 0, 0, 1, 1, (char *) &mbr);
 
-	int part_formatear=0;
 	struct SECBOOTPART sbp;
-	int unidad = 0;
-	int sfip = 2,sip = 0,cip= 0;
+	int seclog = 0;
 
 	// Obtener de la tabla de particiones los valores de:
 	// 	sfip = Sector físico inicial de la partición
@@ -110,18 +109,22 @@ int main()
 	//	cip = Cilindro inicial de la partición
 
 	sbp.sec_inicpart=2;
-	sbp.sec_res=1;
+	sbp.sec_res=1;																	// 1 sector reservado para el sector de boot de la partición
 	sbp.sec_mapa_bits_area_nodos_i=1;
 	sbp.sec_mapa_bits_bloques=6;
 	sbp.sec_tabla_nodos_i=3;
-	sbp.sec_log_particion=43100;
+	sbp.sec_log_particion=43199;
 	sbp.sec_x_bloque=2;
 	sbp.heads=8;
 	sbp.cyls=200;
 	sbp.secfis=27;
 
-	// Escribir el contenido de la estructura sbp en el sector físico inicial de la
-	// partición
-	//vdwritesector(unidad,cip,sip,sfip,1,(char *) &sbp);
+	for(int i = 0; i < 484; i++)
+		sbp.restante[i] = 170 & 0xAA;									// Lleno restante de puras A para ver mejor su lugar en el disco
 
+	// Escribir el contenido de la estructura sbp en el sector físico inicial de la partición
+	vdwriteseclog(seclog, (char *) &sbp);
+
+	unsigned char buffer[512];
+	int seclog = vdreadseclog
 }

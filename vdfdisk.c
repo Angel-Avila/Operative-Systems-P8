@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include "vdisk.h"
 #include "phys2log.h"
+#include "mapainodoshandler.h"
+#include "mapadatoshandler.h"
+#include "blockhandler.h"
+#include "inodehandler.h"
 
 #pragma pack(1)
 
@@ -19,40 +23,10 @@ struct MBR {
 	unsigned short signature;		// 16 bits = 2 bytes
 };
 
-// Debe medir 512 bytes
-struct SECBOOTPART {
-	char jump[4];
-	char nombre_particion[8];
-	// Tabla de parámetros del bios
-	// Están los datos sobre el formato de la partición
-	unsigned short sec_inicpart;		// 1 sector
-	unsigned char sec_res;		// 1 sector reservado para el sector de boot de la partición
-	unsigned char sec_mapa_bits_area_nodos_i;// 1 sector
-	unsigned char sec_mapa_bits_bloques;	// 6 sectores
-	unsigned short sec_tabla_nodos_i;	// 3 sectores
-	unsigned int sec_log_particion;		// 43199 sectores
-	unsigned char sec_x_bloque;			// 2 sectores por bloque
-	unsigned char heads;				// 8 superficies
-	unsigned char cyls;				// 200 cilindros
-	unsigned char secfis;				// 27 sectores por track
-	char restante[484];	// Código de arranque
-};
 // printf("%d\n",sizeof(struct SECBOOT));
 
-// Debe medir 64 bytes, importante es que el tamaño sea potencia de 2
-struct INODE {
-	char name[18];
-	unsigned int datetimecreat;	// 32 bits
-	unsigned int datetimemodif;	// 32 bits
-	unsigned int datetimelaacc; // 32 bits
-	unsigned short uid;		// 16 bits
-	unsigned short gid;		// 16 bits
-	unsigned short perms;	// 16 bits
-	unsigned int size;			// 32 bits
-	unsigned short direct_blocks[10];	// 10 x 16 bits = 20 bytes
-	unsigned short indirect;	// 16 bits
-	unsigned short indirect2;	// 16 bits
-};
+#define LINESIZE 16
+#define SECSIZE 512
 
 int main()
 {
@@ -80,7 +54,7 @@ int main()
 
 	mbr.signature = 0xAA55;
 
-	printf("end de la primera particion %X %X %X\n", mbr.partition[0].chs_end[0], mbr.partition[0].chs_end[1], mbr.partition[0].chs_end[2]);
+	//printf("end de la primera particion %X %X %X\n", mbr.partition[0].chs_end[0], mbr.partition[0].chs_end[1], mbr.partition[0].chs_end[2]);
 
 	for(int i = 1; i < 4; i++) {
 		mbr.partition[i].drive_status = 0; 					  // Status; bit 7 is set for active or bootable
@@ -108,7 +82,7 @@ int main()
 	//	sip = Superficie inicial de la partición
 	//	cip = Cilindro inicial de la partición
 
-	sbp.sec_inicpart=2;
+	sbp.sec_inicpart=0;
 	sbp.sec_res=1;																	// 1 sector reservado para el sector de boot de la partición
 	sbp.sec_mapa_bits_area_nodos_i=1;
 	sbp.sec_mapa_bits_bloques=6;
@@ -125,6 +99,37 @@ int main()
 	// Escribir el contenido de la estructura sbp en el sector físico inicial de la partición
 	vdwriteseclog(seclog, (char *) &sbp);
 
-	unsigned char buffer[512];
-	int seclog = vdreadseclog
+	printf("==============================================================\n");
+
+	unsigned char buffer[SECSIZE*2];
+
+	for(int i = 0; i < SECSIZE*2; i++)
+		buffer[i] = 0xAA;
+
+	writeblock(1, buffer);
+
+	for(int i = 0; i < 2; i++) {
+		assigninode(i);
+		printf("Next free inode %d\n", nextfreeinode());
+		printf("---------------------------------------\n");
+	}
+
+	printf("==============================================================\n");
+
+	for(int i = 0; i < 2; i++) {
+		assignblock(i);
+		//printf("Next free block %d\n", nextfreeblock());
+		//printf("---------------------------------------\n");
+	}
+
+	printf("==============================================================\n");
+
+	char buf[18];
+
+	for(int i=0;i<18;i++)
+		buf[i] = 0xC;
+
+	for(int i=0;i<24;i++)
+		setninode(i, buf, 0xF, 0xD, 0xE);
+
 }

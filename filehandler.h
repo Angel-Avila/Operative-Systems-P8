@@ -1,3 +1,5 @@
+#define TAMBLOQUE 1024
+
 struct OPENFILES {
 	int inuse;		// 0 cerrado, 1 abierto
 	unsigned short inode;

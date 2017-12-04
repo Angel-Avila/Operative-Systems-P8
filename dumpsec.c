@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "vdisk.h"
+#include "phys2log.h"
 
 #define LINESIZE 16
 #define SECSIZE 512
